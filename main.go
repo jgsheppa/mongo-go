@@ -41,6 +41,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Route("/magazines", func(r chi.Router) {
+		r.Get("/", magazineController.GetAllMagazines)
 		r.Get("/{magazineId}", magazineController.MagazineById)
 	})
 	http.ListenAndServe(":3000", r)

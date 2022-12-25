@@ -15,6 +15,7 @@ type Magazine struct {
 
 type MagazineDB interface {
 	FindById(id string) (*Magazine, error)
+	FindAll() (*[]Magazine, error)
 }
 
 type MagazineService interface {
@@ -56,4 +57,20 @@ func (mM *mongoMagazine) FindById(id string) (*Magazine, error) {
 	}
 
 	return &magazine, nil
+}
+
+func (mM *mongoMagazine) FindAll() (*[]Magazine, error) {
+	magazines := make([]Magazine, 2)
+
+	collection, err := mM.db.Database("library").Collection("magazines").Find(context.TODO(), bson.M{})
+	if err != nil {
+		return nil, err
+	}
+
+	err = collection.All(context.TODO(), &magazines)
+	if err != nil {
+		return nil, err
+	}
+
+	return &magazines, nil
 }
