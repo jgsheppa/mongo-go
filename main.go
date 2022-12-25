@@ -1,27 +1,22 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/jgsheppa/mongo-go/controllers"
+	"github.com/jgsheppa/mongo-go/models"
 	"github.com/spf13/viper"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Magazine struct {
-	price string
-	name  string
+	Title string `json:"title"`
+	Price string `json:"price"`
 }
 
-func main() {
+func init() {
 	viper.SetConfigName("config")         // name of config file (without extension)
 	viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath("$HOME/mongo-go") // call multiple times to add many search paths
@@ -30,35 +25,29 @@ func main() {
 	if err != nil {                       // Handle errors reading the config file
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
+}
+
+func main() {
 	MONGO_URI := viper.GetString("mongodb")
 
-	serverAPIOptions := options.ServerAPI(options.ServerAPIVersion1)
-	clientOptions := options.Client().
-		ApplyURI(MONGO_URI).
-		SetServerAPIOptions(serverAPIOptions)
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
-	defer cancel()
-	client, err := mongo.Connect(ctx, clientOptions)
+	services, err := models.NewServices(MONGO_URI)
+	if err != nil {
+		panic(err)
+	}
+	must(err)
 
-	defer func() {
-		if err = client.Disconnect(ctx); err != nil {
-			panic(err)
-		}
-	}()
-
-	var result bson.M
-
-	collection := client.Database("library").Collection("magazines")
-	err = collection.FindOne(context.TODO(), bson.M{}).Decode(&result)
+	magazineController := controllers.NewMagazine(services.Magazine)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		res, err := json.Marshal(result)
-		if err != nil {
-			log.Fatalf("occured while retrieving index: %v", err)
-		}
-		w.Write(res)
+	r.Route("/magazines", func(r chi.Router) {
+		r.Get("/{magazineId}", magazineController.MagazineById)
 	})
 	http.ListenAndServe(":3000", r)
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
