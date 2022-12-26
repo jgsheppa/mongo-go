@@ -43,8 +43,9 @@ func main() {
 	r.Route("/magazines", func(r chi.Router) {
 		r.Get("/", magazineController.GetAllMagazines)
 		r.Post("/{title}/{price}", magazineController.CreateMagazine)
+		r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
 
-		r.Route("/{magazineId}", func(r chi.Router){
+		r.Route("/{magazineId}", func(r chi.Router) {
 			r.Get("/", magazineController.MagazineById)
 			r.Delete("/", magazineController.DeleteMagazine)
 		})

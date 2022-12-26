@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Magazine struct {
@@ -19,7 +18,8 @@ type MagazineDB interface {
 	FindById(id string) (*Magazine, error)
 	FindAll() (*[]Magazine, error)
 	Delete(id string) (*mongo.DeleteResult, error)
-	Create(magazine Magazine) (*mongo.UpdateResult, error)
+	Create(magazine Magazine) (*mongo.InsertOneResult, error)
+	UpdateById(magazine Magazine) (*mongo.UpdateResult, error)
 }
 
 type MagazineService interface {
@@ -53,9 +53,23 @@ func (mM *mongoMagazine) FindById(id string) (*Magazine, error) {
 	}
 
 	magazine := Magazine{}
+	db := mM.db.Database("library").Collection("magazines")
 
-	collection := mM.db.Database("library").Collection("magazines").FindOne(context.TODO(), bson.M{"_id": objectId})
+	collection := db.FindOne(context.TODO(), bson.M{"_id": objectId})
 	err = collection.Decode(&magazine)
+	if err != nil {
+		return nil, err
+	}
+
+	return &magazine, nil
+}
+
+func (mM *mongoMagazine) FindByTitle(title string) (*Magazine, error) {
+	magazine := Magazine{}
+	db := mM.db.Database("library").Collection("magazines")
+
+	collection := db.FindOne(context.TODO(), bson.M{"title": title})
+	err := collection.Decode(&magazine)
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +79,9 @@ func (mM *mongoMagazine) FindById(id string) (*Magazine, error) {
 
 func (mM *mongoMagazine) FindAll() (*[]Magazine, error) {
 	magazines := make([]Magazine, 2)
+	db := mM.db.Database("library").Collection("magazines")
 
-	collection, err := mM.db.Database("library").Collection("magazines").Find(context.TODO(), bson.M{})
+	collection, err := db.Find(context.TODO(), bson.M{})
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +100,9 @@ func (mM *mongoMagazine) Delete(id string) (*mongo.DeleteResult, error) {
 		return nil, err
 	}
 
-	res, err := mM.db.Database("library").Collection("magazines").DeleteOne(context.Background(), bson.M{"_id": objectId})
+	db := mM.db.Database("library").Collection("magazines")
+
+	res, err := db.DeleteOne(context.Background(), bson.M{"_id": objectId})
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +110,22 @@ func (mM *mongoMagazine) Delete(id string) (*mongo.DeleteResult, error) {
 	return res, nil
 }
 
-func (mM *mongoMagazine) Create(magazine Magazine) (*mongo.UpdateResult, error) {
-	opts := options.Update().SetUpsert(true)
-	
+func (mM *mongoMagazine) Create(magazine Magazine) (*mongo.InsertOneResult, error) {
+	db := mM.db.Database("library").Collection("magazines")
+
+	res, err := db.InsertOne(context.Background(), magazine)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (mM *mongoMagazine) UpdateById(magazine Magazine) (*mongo.UpdateResult, error) {
+	db := mM.db.Database("library").Collection("magazines")
 	payload := bson.D{{Key: "$set", Value: magazine}}
 
-	res, err := mM.db.Database("library").Collection("magazines").UpdateOne(context.Background(), bson.M{"_id": magazine.ID}, payload, opts)
-
+	res, err := db.UpdateByID(context.Background(), magazine.ID, payload)
 	if err != nil {
 		return nil, err
 	}

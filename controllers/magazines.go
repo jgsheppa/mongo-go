@@ -117,10 +117,59 @@ func (m *Magazine) CreateMagazine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedCount := strconv.Itoa(int(res.UpsertedCount))
+	jsonMessage = Response{
+		Message:      "Document created. Unique id is : " + res.InsertedID.(primitive.ObjectID).Hex(),
+		Error:        false,
+		ErrorMessage: nil,
+		StatusCode:   http.StatusAccepted,
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(jsonMessage)
+}
+
+func (m *Magazine) UpdateMagazine(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	jsonMessage := Response{}
+
+	id := chi.URLParam(r, "id")
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "Error converting primitve to string",
+			Error:        true,
+			ErrorMessage: err,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
+
+	title := chi.URLParam(r, "title")
+	price := chi.URLParam(r, "price")
+	magazine := models.Magazine{
+		ID:    objectId,
+		Title: title,
+		Price: price,
+	}
+
+	res, err := m.ms.UpdateById(magazine)
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "Document not found",
+			Error:        true,
+			ErrorMessage: err,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
+
+	count := strconv.Itoa(int(res.UpsertedCount))
 
 	jsonMessage = Response{
-		Message:      "Documents created: " + updatedCount,
+		Message:      "Documents created: " + count,
 		Error:        false,
 		ErrorMessage: nil,
 		StatusCode:   http.StatusAccepted,
