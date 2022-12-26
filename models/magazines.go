@@ -9,13 +9,15 @@ import (
 )
 
 type Magazine struct {
-	Title string `json:"title"`
-	Price string `json:"price"`
+	ID    primitive.ObjectID `bson:"_id" json:"id,omitempty"`
+	Title string             `json:"title"`
+	Price string             `json:"price"`
 }
 
 type MagazineDB interface {
 	FindById(id string) (*Magazine, error)
 	FindAll() (*[]Magazine, error)
+	Delete(id string) (*mongo.DeleteResult, error)
 }
 
 type MagazineService interface {
@@ -73,4 +75,13 @@ func (mM *mongoMagazine) FindAll() (*[]Magazine, error) {
 	}
 
 	return &magazines, nil
+}
+
+func (mM *mongoMagazine) Delete(id string) (*mongo.DeleteResult, error) {
+	res, err := mM.db.Database("library").Collection("magazines").DeleteOne(context.TODO(), bson.M{"_id": id})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
