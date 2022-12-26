@@ -6,18 +6,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Magazine struct {
 	ID    primitive.ObjectID `bson:"_id" json:"id,omitempty"`
-	Title string             `json:"title"`
-	Price string             `json:"price"`
+	Title string             `bson:"title" json:"title"`
+	Price string             `bson:"price" json:"price"`
 }
 
 type MagazineDB interface {
 	FindById(id string) (*Magazine, error)
 	FindAll() (*[]Magazine, error)
 	Delete(id string) (*mongo.DeleteResult, error)
+	Create(magazine Magazine) (*mongo.UpdateResult, error)
 }
 
 type MagazineService interface {
@@ -78,7 +80,26 @@ func (mM *mongoMagazine) FindAll() (*[]Magazine, error) {
 }
 
 func (mM *mongoMagazine) Delete(id string) (*mongo.DeleteResult, error) {
-	res, err := mM.db.Database("library").Collection("magazines").DeleteOne(context.TODO(), bson.M{"_id": id})
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := mM.db.Database("library").Collection("magazines").DeleteOne(context.Background(), bson.M{"_id": objectId})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+func (mM *mongoMagazine) Create(magazine Magazine) (*mongo.UpdateResult, error) {
+	opts := options.Update().SetUpsert(true)
+	
+	payload := bson.D{{Key: "$set", Value: magazine}}
+
+	res, err := mM.db.Database("library").Collection("magazines").UpdateOne(context.Background(), bson.M{"_id": magazine.ID}, payload, opts)
+
 	if err != nil {
 		return nil, err
 	}

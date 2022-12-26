@@ -42,6 +42,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Route("/magazines", func(r chi.Router) {
 		r.Get("/", magazineController.GetAllMagazines)
+		r.Post("/{title}/{price}", magazineController.CreateMagazine)
 
 		r.Route("/{magazineId}", func(r chi.Router){
 			r.Get("/", magazineController.MagazineById)

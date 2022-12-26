@@ -3,13 +3,22 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi"
 	"github.com/jgsheppa/mongo-go/models"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Magazine struct {
 	ms models.MagazineService
+}
+
+type Response struct {
+	Message      string
+	Error        bool
+	ErrorMessage error
+	StatusCode   int
 }
 
 func NewMagazine(ms models.MagazineService) *Magazine {
@@ -53,14 +62,70 @@ func (m *Magazine) DeleteMagazine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	id := chi.URLParam(r, "magazineId")
-	_, err := m.ms.Delete(id)
+	res, err := m.ms.Delete(id)
+
+	jsonMessage := Response{}
 
 	if err != nil {
+		jsonMessage = Response{
+			Message:      "Document not Found",
+			Error:        true,
+			ErrorMessage: err,
+			StatusCode:   http.StatusNotFound,
+		}
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Document not found"))
+		json.NewEncoder(w).Encode(jsonMessage)
 		return
 	}
 
+	deletedCount := strconv.Itoa(int(res.DeletedCount))
+
+	jsonMessage = Response{
+		Message:      "Documents deleted: " + deletedCount,
+		Error:        false,
+		ErrorMessage: nil,
+		StatusCode:   http.StatusAccepted,
+	}
+
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("Document removed"))
+	json.NewEncoder(w).Encode(jsonMessage)
+
+}
+
+func (m *Magazine) CreateMagazine(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	title := chi.URLParam(r, "title")
+	price := chi.URLParam(r, "price")
+	magazine := models.Magazine{
+		ID:    primitive.NewObjectID(),
+		Title: title,
+		Price: price,
+	}
+	res, err := m.ms.Create(magazine)
+
+	jsonMessage := Response{}
+
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "Document not found",
+			Error:        true,
+			ErrorMessage: err,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
+
+	updatedCount := strconv.Itoa(int(res.UpsertedCount))
+
+	jsonMessage = Response{
+		Message:      "Documents created: " + updatedCount,
+		Error:        false,
+		ErrorMessage: nil,
+		StatusCode:   http.StatusAccepted,
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(jsonMessage)
 }
