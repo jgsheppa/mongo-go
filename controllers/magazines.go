@@ -43,6 +43,22 @@ func (m *Magazine) MagazineById(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(magazine)
 }
 
+func (m *Magazine) MagazineBySlug(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	slug := chi.URLParam(r, "magazineSlug")
+	magazine, err := m.ms.FindBySlug(slug)
+
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("Document not found"))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(magazine)
+}
+
 func (m *Magazine) GetAllMagazines(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 

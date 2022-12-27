@@ -16,6 +16,7 @@ type Magazine struct {
 
 type MagazineDB interface {
 	FindById(id string) (*Magazine, error)
+	FindBySlug(slug string) (*Magazine, error)
 	FindAll() (*[]Magazine, error)
 	Delete(id string) (*mongo.DeleteResult, error)
 	Create(magazine Magazine) (*mongo.InsertOneResult, error)
@@ -57,6 +58,19 @@ func (mM *mongoMagazine) FindById(id string) (*Magazine, error) {
 
 	collection := db.FindOne(context.TODO(), bson.M{"_id": objectId})
 	err = collection.Decode(&magazine)
+	if err != nil {
+		return nil, err
+	}
+
+	return &magazine, nil
+}
+
+func (mM *mongoMagazine) FindBySlug(slug string) (*Magazine, error) {
+	magazine := Magazine{}
+	db := mM.db.Database("library").Collection("magazines")
+
+	collection := db.FindOne(context.TODO(), bson.M{"title": slug})
+	err := collection.Decode(&magazine)
 	if err != nil {
 		return nil, err
 	}
