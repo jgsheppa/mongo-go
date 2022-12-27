@@ -43,6 +43,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(time.Minute * 3))
 	r.Use(middleware.StripSlashes)
 	// TODO: improve CORS once API has frontend
@@ -56,7 +57,7 @@ func main() {
 		AllowCredentials: false,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
-
+	
 	// Enable httprate request limiter of 100 requests per minute.
 	r.Use(httprate.Limit(100, 1*time.Minute, httprate.WithKeyFuncs(httprate.KeyByIP), httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
 		// We can send custom responses for the rate limited requests, e.g. a JSON message
@@ -66,6 +67,7 @@ func main() {
 	})))
 
 	r.Route("/magazines", func(r chi.Router) {
+		
 		r.Get("/", magazineController.GetAllMagazines)
 		r.Post("/{title}/{price}", magazineController.CreateMagazine)
 		r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
