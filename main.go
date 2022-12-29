@@ -78,6 +78,10 @@ func main() {
 			r.Get("/", magazineController.MagazineById)
 			r.Delete("/", magazineController.DeleteMagazine)
 		})
+
+		r.Route("/aggregations", func(r chi.Router) {
+			r.Get("/price/{price}", magazineController.AggregateMagazinePrice)
+		})
 	})
 	http.ListenAndServe(":3000", r)
 }

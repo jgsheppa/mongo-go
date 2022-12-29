@@ -15,6 +15,7 @@ type Magazine struct {
 }
 
 type MagazineDB interface {
+	AggregateByPrice(price string) (*[]Magazine, error)
 	FindById(id string) (*Magazine, error)
 	FindBySlug(slug string) (*Magazine, error)
 	FindAll() (*[]Magazine, error)
@@ -145,4 +146,23 @@ func (mM *mongoMagazine) UpdateById(magazine Magazine) (*mongo.UpdateResult, err
 	}
 
 	return res, nil
+}
+
+func (mM *mongoMagazine) AggregateByPrice(price string) (*[]Magazine, error) {
+	db := mM.db.Database("library").Collection("magazines")
+	groupStage := bson.D{{Key: "$match", Value: bson.D{{Key: "price", Value: price}}}}
+
+	res, err := db.Aggregate(context.Background(), mongo.Pipeline{groupStage})
+	if err != nil {
+		return nil, err
+	}
+
+	magazines := make([]Magazine, 2)
+
+	err = res.All(context.Background(), &magazines)
+	if err != nil {
+		return nil, err
+	}
+
+	return &magazines, nil
 }

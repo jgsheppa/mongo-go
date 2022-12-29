@@ -194,3 +194,27 @@ func (m *Magazine) UpdateMagazine(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(jsonMessage)
 }
+
+func (m *Magazine) AggregateMagazinePrice(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	jsonMessage := Response{}
+
+	price := chi.URLParam(r, "price")
+
+	res, err := m.ms.AggregateByPrice(price)
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "Document not found",
+			Error:        true,
+			ErrorMessage: err,
+			StatusCode:   http.StatusNotFound,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(res)
+}
