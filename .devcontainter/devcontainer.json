@@ -12,7 +12,9 @@
 	"customizations": {
 		// Configure properties specific to VS Code.
 		"vscode": {
-			"settings": {},
+			"settings": {
+				"files.autoSave": "onFocusChange"
+			},
 			"extensions": [
 				"streetsidesoftware.code-spell-checker",
                 "golang.go"
