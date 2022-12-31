@@ -75,8 +75,7 @@ func main() {
 		r.Get("/slug/{magazineSlug:[a-zA-Z ]+}", magazineController.MagazineBySlug)
 
 		r.Route("/search", func(r chi.Router) {
-			r.Get("/{term:[a-zA-Z ]+}", magazineController.SearchMagazines)
-			r.Post("/index/{term:[a-zA-Z ]+}", magazineController.CreateMagazineIndex)
+			r.Get("/{field:[a-zA-Z ]+}/{term:[a-zA-Z ]+}", magazineController.SearchMagazines)
 		})
 
 		r.Route("/{magazineId}", func(r chi.Router) {

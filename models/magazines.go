@@ -3,10 +3,12 @@ package models
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Magazine struct {
@@ -25,8 +27,7 @@ type MagazineDB interface {
 	UpdateById(magazine Magazine) (*mongo.UpdateResult, error)
 	Delete(id string) (*mongo.DeleteResult, error)
 	// Search
-	CreateIndex(field string) (string, error)
-	Search(term string) (*[]Magazine, error)
+	Search(field, term string) (*[]Magazine, error)
 }
 
 type MagazineService interface {
@@ -172,13 +173,13 @@ func (mM *mongoMagazine) AggregateByPrice(price string) (*[]Magazine, error) {
 	return &magazines, nil
 }
 
-func (mM *mongoMagazine) Search(term string) (*[]Magazine, error) {
-	escapeTerm := fmt.Sprintf("\"%v\"", term)
-
+func (mM *mongoMagazine) Search(field, term string) (*[]Magazine, error) {
+	searchStage := bson.D{{Key: "$search", Value: bson.D{{Key: "index", Value: "magazines"}, {Key: "text", Value: bson.D{{Key: "path", Value: field}, {Key: "query", Value: term}}}}}}
+	// specify the amount of time the operation can run on the server
+	opts := options.Aggregate().SetMaxTime(5 * time.Second)
+	// run pipeline
 	db := mM.db.Database("library").Collection("magazines")
-	filter := bson.D{{Key: "$text", Value: bson.D{{Key: "$search", Value: escapeTerm}}}}
-
-	res, err := db.Find(context.Background(), filter)
+	res, err := db.Aggregate(context.Background(), mongo.Pipeline{searchStage}, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -190,16 +191,6 @@ func (mM *mongoMagazine) Search(term string) (*[]Magazine, error) {
 		return nil, err
 	}
 
+	fmt.Printf("magazines: %v", magazines)
 	return &magazines, nil
-}
-
-func (mM *mongoMagazine) CreateIndex(field string) (string, error) {
-	model := mongo.IndexModel{Keys: bson.D{{Key: field, Value: "text"}}}
-	db := mM.db.Database("library").Collection("magazines")
-
-	name, err := db.Indexes().CreateOne(context.TODO(), model)
-	if err != nil {
-		return "", nil
-	}
-	return name, nil
 }
