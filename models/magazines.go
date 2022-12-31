@@ -2,6 +2,7 @@ package models
 
 import (
 	"context"
+	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -16,12 +17,16 @@ type Magazine struct {
 
 type MagazineDB interface {
 	AggregateByPrice(price string) (*[]Magazine, error)
+	// CRUD operations
+	Create(magazine Magazine) (*mongo.InsertOneResult, error)
 	FindById(id string) (*Magazine, error)
 	FindBySlug(slug string) (*Magazine, error)
 	FindAll() (*[]Magazine, error)
-	Delete(id string) (*mongo.DeleteResult, error)
-	Create(magazine Magazine) (*mongo.InsertOneResult, error)
 	UpdateById(magazine Magazine) (*mongo.UpdateResult, error)
+	Delete(id string) (*mongo.DeleteResult, error)
+	// Search
+	CreateIndex(field string) (string, error)
+	Search(term string) (*[]Magazine, error)
 }
 
 type MagazineService interface {
@@ -165,4 +170,36 @@ func (mM *mongoMagazine) AggregateByPrice(price string) (*[]Magazine, error) {
 	}
 
 	return &magazines, nil
+}
+
+func (mM *mongoMagazine) Search(term string) (*[]Magazine, error) {
+	escapeTerm := fmt.Sprintf("\"%v\"", term)
+
+	db := mM.db.Database("library").Collection("magazines")
+	filter := bson.D{{Key: "$text", Value: bson.D{{Key: "$search", Value: escapeTerm}}}}
+
+	res, err := db.Find(context.Background(), filter)
+	if err != nil {
+		return nil, err
+	}
+
+	magazines := make([]Magazine, 2)
+
+	err = res.All(context.Background(), &magazines)
+	if err != nil {
+		return nil, err
+	}
+
+	return &magazines, nil
+}
+
+func (mM *mongoMagazine) CreateIndex(field string) (string, error) {
+	model := mongo.IndexModel{Keys: bson.D{{Key: field, Value: "text"}}}
+	db := mM.db.Database("library").Collection("magazines")
+
+	name, err := db.Indexes().CreateOne(context.TODO(), model)
+	if err != nil {
+		return "", nil
+	}
+	return name, nil
 }

@@ -218,3 +218,58 @@ func (m *Magazine) AggregateMagazinePrice(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(res)
 }
+
+func (m *Magazine) SearchMagazines(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	jsonMessage := Response{}
+
+	term := chi.URLParam(r, "term")
+
+	res, err := m.ms.Search(term)
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "No search results found",
+			Error:        true,
+			ErrorMessage: err,
+			StatusCode:   http.StatusNotFound,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(res)
+}
+
+func (m *Magazine) CreateMagazineIndex(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	jsonMessage := Response{}
+
+	field := chi.URLParam(r, "field")
+
+	res, err := m.ms.CreateIndex(field)
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "No search results found",
+			Error:        true,
+			ErrorMessage: err,
+			StatusCode:   http.StatusNotFound,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
+
+	jsonMessage = Response{
+		Message:      "Index created:" + res,
+		Error:        false,
+		ErrorMessage: nil,
+		StatusCode:   http.StatusCreated,
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(jsonMessage)
+}

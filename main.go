@@ -57,7 +57,7 @@ func main() {
 		AllowCredentials: false,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
-	
+
 	// Enable httprate request limiter of 100 requests per minute.
 	r.Use(httprate.Limit(100, 1*time.Minute, httprate.WithKeyFuncs(httprate.KeyByIP), httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
 		// We can send custom responses for the rate limited requests, e.g. a JSON message
@@ -67,12 +67,17 @@ func main() {
 	})))
 
 	r.Route("/magazines", func(r chi.Router) {
-		
+
 		r.Get("/", magazineController.GetAllMagazines)
 		r.Post("/{title}/{price}", magazineController.CreateMagazine)
 		r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
 
 		r.Get("/slug/{magazineSlug:[a-zA-Z ]+}", magazineController.MagazineBySlug)
+
+		r.Route("/search", func(r chi.Router) {
+			r.Get("/{term:[a-zA-Z ]+}", magazineController.SearchMagazines)
+			r.Post("/index/{term:[a-zA-Z ]+}", magazineController.CreateMagazineIndex)
+		})
 
 		r.Route("/{magazineId}", func(r chi.Router) {
 			r.Get("/", magazineController.MagazineById)
