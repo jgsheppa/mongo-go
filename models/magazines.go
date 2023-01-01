@@ -174,12 +174,22 @@ func (mM *mongoMagazine) AggregateByPrice(price string) (*[]Magazine, error) {
 }
 
 func (mM *mongoMagazine) Search(field, term string) (*[]Magazine, error) {
-	searchStage := bson.D{{Key: "$search", Value: bson.D{{Key: "index", Value: "magazines"}, {Key: "text", Value: bson.D{{Key: "path", Value: field}, {Key: "query", Value: term}}}}}}
-	// specify the amount of time the operation can run on the server
+	searchQuery := bson.D{{Key: "index", Value: "magazine_title"},
+		{Key: "autocomplete", Value: bson.D{
+			{Key: "path", Value: field},
+			{Key: "query", Value: term},
+		}}}
+	searchStage := bson.D{{Key: "$search", Value: searchQuery}}
+	limitStage := bson.D{{Key: "$limit", Value: 5}}
+	projectStage := bson.D{
+		{Key: "$project", Value: bson.D{{Key: "score", Value: bson.D{{Key: "$meta", Value: "searchScore"}}},
+			{Key: field, Value: 1}, {Key: "_id", Value: 1}, {Key: "price", Value: 1},
+			{Key: "highlight", Value: bson.D{{Key: "$meta", Value: "searchHighlights"}}}}}}
+
 	opts := options.Aggregate().SetMaxTime(5 * time.Second)
 	// run pipeline
 	db := mM.db.Database("library").Collection("magazines")
-	res, err := db.Aggregate(context.Background(), mongo.Pipeline{searchStage}, opts)
+	res, err := db.Aggregate(context.Background(), mongo.Pipeline{searchStage, limitStage, projectStage}, opts)
 	if err != nil {
 		return nil, err
 	}
