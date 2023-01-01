@@ -2,7 +2,6 @@ package models
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -12,9 +11,9 @@ import (
 )
 
 type Magazine struct {
-	ID    primitive.ObjectID `bson:"_id" json:"id,omitempty"`
-	Title string             `bson:"title" json:"title"`
-	Price string             `bson:"price" json:"price"`
+	ID    primitive.ObjectID   `bson:"_id" json:"id,omitempty"`
+	Title string               `bson:"title" json:"title"`
+	Price primitive.Decimal128 `bson:"price" json:"price"`
 }
 
 type MagazineDB interface {
@@ -201,6 +200,5 @@ func (mM *mongoMagazine) Search(field, term string) (*[]Magazine, error) {
 		return nil, err
 	}
 
-	fmt.Printf("magazines: %v", magazines)
 	return &magazines, nil
 }

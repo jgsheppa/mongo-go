@@ -110,17 +110,27 @@ func (m *Magazine) DeleteMagazine(w http.ResponseWriter, r *http.Request) {
 
 func (m *Magazine) CreateMagazine(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	jsonMessage := Response{}
 
 	title := chi.URLParam(r, "title")
 	price := chi.URLParam(r, "price")
+	priceInt, err := primitive.ParseDecimal128(price)
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "Conversion from string to float failed",
+			Error:        true,
+			ErrorMessage: err,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
 	magazine := models.Magazine{
 		ID:    primitive.NewObjectID(),
 		Title: title,
-		Price: price,
+		Price: priceInt,
 	}
 	res, err := m.ms.Create(magazine)
-
-	jsonMessage := Response{}
 
 	if err != nil {
 		jsonMessage = Response{
@@ -164,10 +174,22 @@ func (m *Magazine) UpdateMagazine(w http.ResponseWriter, r *http.Request) {
 
 	title := chi.URLParam(r, "title")
 	price := chi.URLParam(r, "price")
+	priceInt, err := primitive.ParseDecimal128(price)
+	if err != nil {
+		jsonMessage = Response{
+			Message:      "Conversion from string to float failed",
+			Error:        true,
+			ErrorMessage: err,
+		}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(jsonMessage)
+		return
+	}
+
 	magazine := models.Magazine{
 		ID:    objectId,
 		Title: title,
-		Price: price,
+		Price: priceInt,
 	}
 
 	res, err := m.ms.UpdateById(magazine)
