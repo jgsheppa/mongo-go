@@ -8,9 +8,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type Services struct{
+type Services struct {
+	User     UserService
 	Magazine MagazineService
-	mongo *mongo.Client
+	mongo    *mongo.Client
 }
 
 func NewServices(connectionString string) (*Services, error) {
@@ -28,6 +29,7 @@ func NewServices(connectionString string) (*Services, error) {
 
 	return &Services{
 		Magazine: NewMagazineService(db),
-		mongo: db,
+		User:     NewUserService(db),
+		mongo:    db,
 	}, nil
 }
