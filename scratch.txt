@@ -1,9 +1,0 @@
-curl --header "Content-Type: application/json" \
-  --request POST \
-  --data '{"email":"james@test.com","password":"password"}' \
-  http://localhost:3000/user/login
-
-fetch("/user/login", {method: "POST", headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }, body: JSON.stringify({"email": "james@test.com", "password":"password"})}).then(res => res)
