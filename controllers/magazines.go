@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/go-chi/chi"
+	"github.com/jgsheppa/mongo-go/errors"
 	"github.com/jgsheppa/mongo-go/models"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -34,8 +35,9 @@ func (m *Magazine) MagazineById(w http.ResponseWriter, r *http.Request) {
 	magazine, err := m.ms.FindById(id)
 
 	if err != nil {
+		responseError := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Document not found"))
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 
@@ -50,8 +52,9 @@ func (m *Magazine) MagazineBySlug(w http.ResponseWriter, r *http.Request) {
 	magazine, err := m.ms.FindBySlug(slug)
 
 	if err != nil {
+		responseError := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Document not found"))
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 
@@ -65,8 +68,9 @@ func (m *Magazine) GetAllMagazines(w http.ResponseWriter, r *http.Request) {
 	magazines, err := m.ms.FindAll()
 
 	if err != nil {
+		responseError := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Document not found"))
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 
@@ -80,23 +84,16 @@ func (m *Magazine) DeleteMagazine(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "magazineId")
 	res, err := m.ms.Delete(id)
 
-	jsonMessage := Response{}
-
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "Document not Found",
-			Error:        true,
-			ErrorMessage: err,
-			StatusCode:   http.StatusNotFound,
-		}
+		responseError := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 
 	deletedCount := strconv.Itoa(int(res.DeletedCount))
 
-	jsonMessage = Response{
+	jsonMessage := Response{
 		Message:      "Documents deleted: " + deletedCount,
 		Error:        false,
 		ErrorMessage: nil,
@@ -116,13 +113,9 @@ func (m *Magazine) CreateMagazine(w http.ResponseWriter, r *http.Request) {
 	price := chi.URLParam(r, "price")
 	priceInt, err := primitive.ParseDecimal128(price)
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "Conversion from string to float failed",
-			Error:        true,
-			ErrorMessage: err,
-		}
+		responseError := errors.InternalError("Conversion from string to float failed", err)
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 	magazine := models.Magazine{
@@ -133,13 +126,9 @@ func (m *Magazine) CreateMagazine(w http.ResponseWriter, r *http.Request) {
 	res, err := m.ms.Create(magazine)
 
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "Document not found",
-			Error:        true,
-			ErrorMessage: err,
-		}
+		responseError := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 
@@ -162,13 +151,9 @@ func (m *Magazine) UpdateMagazine(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "Error converting primitve to string",
-			Error:        true,
-			ErrorMessage: err,
-		}
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		responseError := errors.InternalError("Error converting primitve to string", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 
@@ -176,13 +161,9 @@ func (m *Magazine) UpdateMagazine(w http.ResponseWriter, r *http.Request) {
 	price := chi.URLParam(r, "price")
 	priceInt, err := primitive.ParseDecimal128(price)
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "Conversion from string to float failed",
-			Error:        true,
-			ErrorMessage: err,
-		}
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		responseError := errors.InternalError("Conversion from string to float failed", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(responseError)
 		return
 	}
 
@@ -194,13 +175,9 @@ func (m *Magazine) UpdateMagazine(w http.ResponseWriter, r *http.Request) {
 
 	res, err := m.ms.UpdateById(magazine)
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "Document not found",
-			Error:        true,
-			ErrorMessage: err,
-		}
+		errorResponse := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		json.NewEncoder(w).Encode(errorResponse)
 		return
 	}
 
@@ -220,20 +197,13 @@ func (m *Magazine) UpdateMagazine(w http.ResponseWriter, r *http.Request) {
 func (m *Magazine) AggregateMagazinePrice(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	jsonMessage := Response{}
-
 	price := chi.URLParam(r, "price")
 
 	res, err := m.ms.AggregateByPrice(price)
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "Document not found",
-			Error:        true,
-			ErrorMessage: err,
-			StatusCode:   http.StatusNotFound,
-		}
+		errorResponse := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		json.NewEncoder(w).Encode(errorResponse)
 		return
 	}
 
@@ -244,21 +214,14 @@ func (m *Magazine) AggregateMagazinePrice(w http.ResponseWriter, r *http.Request
 func (m *Magazine) SearchMagazines(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	jsonMessage := Response{}
-
 	term := chi.URLParam(r, "term")
 	field := chi.URLParam(r, "field")
 
 	res, err := m.ms.Search(field, term)
 	if err != nil {
-		jsonMessage = Response{
-			Message:      "No search results found",
-			Error:        true,
-			ErrorMessage: err,
-			StatusCode:   http.StatusNotFound,
-		}
+		errorResponse := errors.NotFound(err)
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(jsonMessage)
+		json.NewEncoder(w).Encode(errorResponse)
 		return
 	}
 

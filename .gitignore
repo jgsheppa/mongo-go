@@ -1,1 +1,5 @@
+# File containing secrets
 config.yaml
+
+# Go build
+mongo-go
