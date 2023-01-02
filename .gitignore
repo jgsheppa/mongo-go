@@ -3,3 +3,6 @@ config.yaml
 
 # Go build
 mongo-go
+
+# Scratch file
+scratch.txt

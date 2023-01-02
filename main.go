@@ -9,28 +9,33 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
+	"github.com/go-chi/jwtauth"
+	"github.com/jgsheppa/mongo-go/auth"
 	"github.com/jgsheppa/mongo-go/controllers"
 	"github.com/jgsheppa/mongo-go/models"
 	"github.com/spf13/viper"
 )
 
-type Magazine struct {
-	Title string `json:"title"`
-	Price string `json:"price"`
-}
+var TokenAuth *jwtauth.JWTAuth
 
 func init() {
-	viper.SetConfigName("config")         // name of config file (without extension)
-	viper.SetConfigType("yaml")           // REQUIRED if the config file does not have the extension in the name
-	viper.AddConfigPath("$HOME/mongo-go") // call multiple times to add many search paths
-	viper.AddConfigPath(".")              // optionally look for config in the working directory
-	err := viper.ReadInConfig()           // Find and read the config file
-	if err != nil {                       // Handle errors reading the config file
+	viper.SetConfigName("config")               // name of config file (without extension)
+	viper.SetConfigType("yaml")                 // REQUIRED if the config file does not have the extension in the name
+	viper.AddConfigPath("/workspaces/mongo-go") // call multiple times to add many search paths
+	viper.AddConfigPath(".")                    // optionally look for config in the working directory
+	err := viper.ReadInConfig()                 // Find and read the config file
+	if err != nil {                             // Handle errors reading the config file
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
+
+	Secret := viper.GetString("JWT_SECRET")
+
+	TokenAuth = jwtauth.New("HS256", []byte(Secret), nil)
 }
 
 func main() {
+	// Inject Token Struct for auth package
+	auth.TokenAuth = TokenAuth
 	MONGO_URI := viper.GetString("mongodb")
 
 	services, err := models.NewServices(MONGO_URI)
@@ -40,6 +45,7 @@ func main() {
 	must(err)
 
 	magazineController := controllers.NewMagazine(services.Magazine)
+	userController := controllers.NewUser(services.User)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -67,7 +73,6 @@ func main() {
 	})))
 
 	r.Route("/magazines", func(r chi.Router) {
-
 		r.Get("/", magazineController.GetAllMagazines)
 		r.Post("/{title}/{price}", magazineController.CreateMagazine)
 		r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
@@ -85,6 +90,37 @@ func main() {
 
 		r.Route("/aggregations", func(r chi.Router) {
 			r.Get("/price/{price}", magazineController.AggregateMagazinePrice)
+		})
+	})
+
+	r.Group(func(r chi.Router) {
+		// Seek, verify and validate JWT tokens
+		r.Use(jwtauth.Verifier(auth.TokenAuth))
+
+		// Handle valid / invalid tokens. In this example, we use
+		// the provided authenticator middleware, but you can write your
+		// own very easily, look at the Authenticator method in jwtauth.go
+		// and tweak it, its not scary.
+		r.Use(jwtauth.Authenticator)
+
+		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
+			_, claims, _ := jwtauth.FromContext(r.Context())
+			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["email"])))
+		})
+	})
+
+	r.Route("/user", func(r chi.Router) {
+		r.Group(func(r chi.Router) {
+			r.Use(jwtauth.Verifier(auth.TokenAuth))
+			r.Use(jwtauth.Authenticator)
+
+			r.Get("/", func(w http.ResponseWriter, r *http.Request) {})
+			r.Get("/login", userController.Login)
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Post("/login", userController.Login)
+			r.Post("/logout", userController.Logout)
 		})
 	})
 	http.ListenAndServe(":3000", r)
