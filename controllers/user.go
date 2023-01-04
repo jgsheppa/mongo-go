@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/jwtauth"
 	"github.com/jgsheppa/mongo-go/auth"
+	"github.com/jgsheppa/mongo-go/errors"
 	"github.com/jgsheppa/mongo-go/models"
 )
 
@@ -83,4 +85,28 @@ func (u *User) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &cookie)
 	http.Redirect(w, r, "/magazines", http.StatusFound)
+}
+
+func (u *User) GetUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	_, claims, err := jwtauth.FromContext(r.Context())
+	if err != nil {
+		responseError := errors.InternalError("JSON web token context failed", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(responseError)
+		return
+	}
+
+	email := claims["email"].(string)
+	user, err := u.us.ByEmail(email)
+	if err != nil {
+		responseError := errors.NotFound(err)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(responseError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(user)
 }

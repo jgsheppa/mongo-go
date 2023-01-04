@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/jwtauth"
 	"github.com/jgsheppa/mongo-go/auth"
 	"github.com/jgsheppa/mongo-go/controllers"
+	middlewares "github.com/jgsheppa/mongo-go/middlewares"
 	"github.com/jgsheppa/mongo-go/models"
 	"github.com/spf13/viper"
 )
@@ -108,10 +109,9 @@ func main() {
 	r.Route("/user", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(auth.TokenAuth))
-			r.Use(jwtauth.Authenticator)
+			r.Use(middlewares.Authenticator)
 
-			r.Get("/", func(w http.ResponseWriter, r *http.Request) {})
-			r.Get("/login", userController.Login)
+			r.Get("/me", userController.GetUser)
 		})
 
 		r.Group(func(r chi.Router) {
