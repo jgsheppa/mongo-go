@@ -93,22 +93,6 @@ func main() {
 		})
 	})
 
-	r.Group(func(r chi.Router) {
-		// Seek, verify and validate JWT tokens
-		r.Use(jwtauth.Verifier(auth.TokenAuth))
-
-		// Handle valid / invalid tokens. In this example, we use
-		// the provided authenticator middleware, but you can write your
-		// own very easily, look at the Authenticator method in jwtauth.go
-		// and tweak it, its not scary.
-		r.Use(jwtauth.Authenticator)
-
-		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-			_, claims, _ := jwtauth.FromContext(r.Context())
-			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["email"])))
-		})
-	})
-
 	r.Route("/user", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(auth.TokenAuth))
