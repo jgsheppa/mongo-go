@@ -1,0 +1,13 @@
+# git
+.git
+
+.devcontainer
+
+# all markdown files
+*.md
+
+# binary
+mongo-go
+
+#scratch file
+scratch.txt
