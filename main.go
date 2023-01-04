@@ -74,10 +74,16 @@ func main() {
 
 	r.Route("/magazines", func(r chi.Router) {
 		r.Get("/", magazineController.GetAllMagazines)
-		r.Post("/{title}/{price}", magazineController.CreateMagazine)
-		r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
-
 		r.Get("/slug/{magazineSlug:[a-zA-Z ]+}", magazineController.MagazineBySlug)
+
+		// Protected update routes
+		r.Group(func(r chi.Router) {
+			r.Use(jwtauth.Verifier(auth.TokenAuth))
+			r.Use(jwtauth.Authenticator)
+
+			r.Post("/{title}/{price}", magazineController.CreateMagazine)
+			r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
+		})
 
 		r.Route("/search", func(r chi.Router) {
 			r.Get("/{field:[a-zA-Z ]+}/{term:[a-zA-Z ]+}", magazineController.SearchMagazines)
@@ -85,7 +91,13 @@ func main() {
 
 		r.Route("/{magazineId}", func(r chi.Router) {
 			r.Get("/", magazineController.MagazineById)
-			r.Delete("/", magazineController.DeleteMagazine)
+
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(auth.TokenAuth))
+				r.Use(jwtauth.Authenticator)
+
+				r.Delete("/", magazineController.DeleteMagazine)
+			})
 		})
 
 		r.Route("/aggregations", func(r chi.Router) {
