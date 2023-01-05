@@ -35,9 +35,11 @@ func init() {
 }
 
 func main() {
-	// Inject Token Struct for auth package
-	auth.TokenAuth = TokenAuth
 	MONGO_URI := viper.GetString("mongodb")
+	PASSWORD_PEPPER := viper.GetString("PASSWORD_PEPPER")
+	// Inject secrets
+	auth.TokenAuth = TokenAuth
+	models.PasswordPepper = PASSWORD_PEPPER
 
 	services, err := models.NewServices(MONGO_URI)
 	if err != nil {

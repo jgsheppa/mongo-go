@@ -6,14 +6,16 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
+var PasswordPepper string
+
 type User struct {
-	ID primitive.ObjectID `bson:"_id" json:"id,omitempty"`
-	// Name         string             `bson:"name" json:"name"`
-	Email    string `bson:"email" json:"email"`
-	Password string `bson:"password" json:"password"`
-	// PasswordHash string             `bson:"password_hash,omitempty" json:"omitempty"`
+	ID       primitive.ObjectID `bson:"_id" json:"id,omitempty"`
+	Name     string             `bson:"name" json:"name"`
+	Email    string             `bson:"email" json:"email"`
+	Password string             `bson:"password" json:"password"`
 }
 
 type UserDB interface {
@@ -64,17 +66,14 @@ func (us *userService) Authenticate(email, password string) (*User, error) {
 		return nil, err
 	}
 
-	// TODO: add this back once hashing ready
-	// userPwPepper := os.Getenv("PASSWORD_PEPPER")
-
-	// err = bcrypt.CompareHashAndPassword([]byte(foundUser.PasswordHash), []byte(password + userPwPepper))
-	// if err != nil {
-	// 	switch err {
-	// 	case bcrypt.ErrMismatchedHashAndPassword:
-	// 		return nil, ErrPasswordIncorrect
-	// 	default:
-	// 		return nil, err
-	// 	}
-	// }
+	err = bcrypt.CompareHashAndPassword([]byte(foundUser.Password), []byte(password+PasswordPepper))
+	if err != nil {
+		switch err {
+		case bcrypt.ErrMismatchedHashAndPassword:
+			return nil, bcrypt.ErrMismatchedHashAndPassword
+		default:
+			return nil, err
+		}
+	}
 	return foundUser, nil
 }
