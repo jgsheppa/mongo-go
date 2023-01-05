@@ -1,0 +1,15 @@
+# git
+.git
+
+# config settings
+.devcontainer
+.vscode
+
+# all markdown files
+*.md
+
+# binary
+mongo-go
+
+#scratch file
+scratch.txt

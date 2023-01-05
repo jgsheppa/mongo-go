@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/jwtauth"
 	"github.com/jgsheppa/mongo-go/auth"
 	"github.com/jgsheppa/mongo-go/controllers"
+	middlewares "github.com/jgsheppa/mongo-go/middlewares"
 	"github.com/jgsheppa/mongo-go/models"
 	"github.com/spf13/viper"
 )
@@ -74,10 +75,16 @@ func main() {
 
 	r.Route("/magazines", func(r chi.Router) {
 		r.Get("/", magazineController.GetAllMagazines)
-		r.Post("/{title}/{price}", magazineController.CreateMagazine)
-		r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
-
 		r.Get("/slug/{magazineSlug:[a-zA-Z ]+}", magazineController.MagazineBySlug)
+
+		// Protected update routes
+		r.Group(func(r chi.Router) {
+			r.Use(jwtauth.Verifier(auth.TokenAuth))
+			r.Use(jwtauth.Authenticator)
+
+			r.Post("/{title}/{price}", magazineController.CreateMagazine)
+			r.Put("/{id}/{title}/{price}", magazineController.UpdateMagazine)
+		})
 
 		r.Route("/search", func(r chi.Router) {
 			r.Get("/{field:[a-zA-Z ]+}/{term:[a-zA-Z ]+}", magazineController.SearchMagazines)
@@ -85,7 +92,13 @@ func main() {
 
 		r.Route("/{magazineId}", func(r chi.Router) {
 			r.Get("/", magazineController.MagazineById)
-			r.Delete("/", magazineController.DeleteMagazine)
+
+			r.Group(func(r chi.Router) {
+				r.Use(jwtauth.Verifier(auth.TokenAuth))
+				r.Use(jwtauth.Authenticator)
+
+				r.Delete("/", magazineController.DeleteMagazine)
+			})
 		})
 
 		r.Route("/aggregations", func(r chi.Router) {
@@ -93,29 +106,12 @@ func main() {
 		})
 	})
 
-	r.Group(func(r chi.Router) {
-		// Seek, verify and validate JWT tokens
-		r.Use(jwtauth.Verifier(auth.TokenAuth))
-
-		// Handle valid / invalid tokens. In this example, we use
-		// the provided authenticator middleware, but you can write your
-		// own very easily, look at the Authenticator method in jwtauth.go
-		// and tweak it, its not scary.
-		r.Use(jwtauth.Authenticator)
-
-		r.Get("/admin", func(w http.ResponseWriter, r *http.Request) {
-			_, claims, _ := jwtauth.FromContext(r.Context())
-			w.Write([]byte(fmt.Sprintf("protected area. hi %v", claims["email"])))
-		})
-	})
-
 	r.Route("/user", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(auth.TokenAuth))
-			r.Use(jwtauth.Authenticator)
+			r.Use(middlewares.Authenticator)
 
-			r.Get("/", func(w http.ResponseWriter, r *http.Request) {})
-			r.Get("/login", userController.Login)
+			r.Get("/me", userController.GetUser)
 		})
 
 		r.Group(func(r chi.Router) {

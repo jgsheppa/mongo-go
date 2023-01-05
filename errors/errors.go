@@ -1,6 +1,11 @@
 package errors
 
-import "net/http"
+import (
+	"errors"
+	"net/http"
+)
+
+var ErrNoToken = errors.New("no token found or token is invalid")
 
 type ErrorResponse struct {
 	Message      string
@@ -24,5 +29,14 @@ func InternalError(message string, err error) ErrorResponse {
 		Error:        true,
 		ErrorMessage: err,
 		StatusCode:   http.StatusInternalServerError,
+	}
+}
+
+func Unauthorized(err error) ErrorResponse {
+	return ErrorResponse{
+		Message:      "Unauthorized",
+		Error:        true,
+		ErrorMessage: err,
+		StatusCode:   http.StatusUnauthorized,
 	}
 }

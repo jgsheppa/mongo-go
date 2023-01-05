@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM golang:1.19.4-bullseye AS Builder
+FROM golang:1.19.4-alpine3.17 AS builder
 WORKDIR /
 
 COPY go.mod ./
@@ -9,7 +9,7 @@ RUN go mod download
 COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app .
 
-FROM alpine:3.14
+FROM golang:1.19.4-alpine3.17
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /app ./
