@@ -1,7 +1,9 @@
 # git
 .git
 
+# config settings
 .devcontainer
+.vscode
 
 # all markdown files
 *.md

@@ -13,7 +13,8 @@
 		// Configure properties specific to VS Code.
 		"vscode": {
 			"settings": {
-				"files.autoSave": "onFocusChange"
+				"files.autoSave": "onFocusChange",
+				"git.enableCommitSigning": true
 			},
 			"extensions": [
 				"streetsidesoftware.code-spell-checker",
