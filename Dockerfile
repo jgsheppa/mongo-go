@@ -13,6 +13,5 @@ FROM golang:1.19.4-alpine3.17
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /app ./
-COPY config.yaml ./
 
 CMD ["./app"]
