@@ -6,3 +6,6 @@ mongo-go
 
 # Scratch file
 scratch.txt
+
+# idea directory
+.idea
