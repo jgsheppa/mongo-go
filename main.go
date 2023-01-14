@@ -41,7 +41,30 @@ func main() {
 	auth.TokenAuth = TokenAuth
 	models.PasswordPepper = PASSWORD_PEPPER
 
-	services, err := models.NewServices(MONGO_URI)
+	s := CreateNewServer()
+	s.MountHandlers(MONGO_URI)
+	http.ListenAndServe(":3000", s.Router)
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+type Server struct {
+	Router   *chi.Mux
+	Services *models.Services
+}
+
+func CreateNewServer() *Server {
+	s := &Server{}
+	s.Router = chi.NewRouter()
+	return s
+}
+
+func (s *Server) MountHandlers(mongoURI string) {
+	services, err := models.NewServices(mongoURI)
 	if err != nil {
 		panic(err)
 	}
@@ -50,13 +73,12 @@ func main() {
 	magazineController := controllers.NewMagazine(services.Magazine)
 	userController := controllers.NewUser(services.User)
 
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(time.Minute * 3))
-	r.Use(middleware.StripSlashes)
+	s.Router.Use(middleware.Logger)
+	s.Router.Use(middleware.Recoverer)
+	s.Router.Use(middleware.Timeout(time.Minute * 3))
+	s.Router.Use(middleware.StripSlashes)
 	// TODO: improve CORS once API has frontend
-	r.Use(cors.Handler(cors.Options{
+	s.Router.Use(cors.Handler(cors.Options{
 		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
 		AllowedOrigins: []string{"https://*", "http://*"},
 		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
@@ -68,14 +90,16 @@ func main() {
 	}))
 
 	// Enable httprate request limiter of 100 requests per minute.
-	r.Use(httprate.Limit(100, 1*time.Minute, httprate.WithKeyFuncs(httprate.KeyByIP), httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
+	s.Router.Use(httprate.Limit(100, 1*time.Minute, httprate.WithKeyFuncs(httprate.KeyByIP), httprate.WithLimitHandler(func(w http.ResponseWriter, r *http.Request) {
 		// We can send custom responses for the rate limited requests, e.g. a JSON message
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error": "Too many requests"}`))
 	})))
 
-	r.Route("/magazines", func(r chi.Router) {
+	s.Router.Get("/", HelloWorld)
+
+	s.Router.Route("/magazines", func(r chi.Router) {
 		r.Get("/", magazineController.GetAllMagazines)
 		r.Get("/slug/{magazineSlug:[a-zA-Z ]+}", magazineController.MagazineBySlug)
 
@@ -108,7 +132,7 @@ func main() {
 		})
 	})
 
-	r.Route("/user", func(r chi.Router) {
+	s.Router.Route("/user", func(r chi.Router) {
 		r.Group(func(r chi.Router) {
 			r.Use(jwtauth.Verifier(auth.TokenAuth))
 			r.Use(middlewares.Authenticator)
@@ -121,11 +145,9 @@ func main() {
 			r.Post("/logout", userController.Logout)
 		})
 	})
-	http.ListenAndServe(":3000", r)
 }
 
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
+// HelloWorld api Handler
+func HelloWorld(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello World!"))
 }
