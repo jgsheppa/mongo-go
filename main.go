@@ -24,13 +24,17 @@ func init() {
 	viper.SetConfigType("yaml")                 // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath("/workspaces/mongo-go") // call multiple times to add many search paths
 	viper.AddConfigPath(".")                    // optionally look for config in the working directory
-	err := viper.ReadInConfig()                 // Find and read the config file
-	if err != nil {                             // Handle errors reading the config file
-		panic(fmt.Errorf("fatal error config file: %w", err))
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// Config file not found; ignore error if desired
+			fmt.Println("warning: config.yaml not found")
+		} else {
+			// Config file was found but another error was produced
+			panic(fmt.Errorf("fatal error loading config file: %w", err))
+		}
 	}
 
 	Secret := viper.GetString("JWT_SECRET")
-
 	TokenAuth = jwtauth.New("HS256", []byte(Secret), nil)
 }
 
