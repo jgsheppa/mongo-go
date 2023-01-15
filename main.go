@@ -23,7 +23,8 @@ func init() {
 	viper.SetConfigName("config")               // name of config file (without extension)
 	viper.SetConfigType("yaml")                 // REQUIRED if the config file does not have the extension in the name
 	viper.AddConfigPath("/workspaces/mongo-go") // call multiple times to add many search paths
-	viper.AddConfigPath(".")                    // optionally look for config in the working directory
+	viper.AddConfigPath("/etc/secrets")
+	viper.AddConfigPath(".") // optionally look for config in the working directory
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// Config file not found; ignore error if desired
